@@ -11,15 +11,30 @@ export default function HomePage() {
   const [summary, setSummary] = useState('');
   const [urdu, setUrdu] = useState('');
 
-  const handleSummarise = () => {
-    // Simulate summary and urdu translation
-    const fakeText = 'This is a sample blog content used for testing the summary feature. It is designed to simulate an AI-generated summary. The goal is to check how the UI looks.';
-    const staticSummary = fakeText.split('.').slice(0, 2).join('.') + '.';
-    const staticUrdu = 'یہ ایک نمونہ بلاگ کا مواد ہے جو خلاصے کی خصوصیت کو جانچنے کے لیے استعمال کیا جاتا ہے۔ اس کا مقصد UI کو چیک کرنا ہے۔';
+  const handleSummarise = async () => {
+  try {
+    const res = await fetch("/api/summarise", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ url }),
+    });
 
-    setSummary(staticSummary);
-    setUrdu(staticUrdu);
-  };
+    if (!res.ok) {
+      throw new Error("Failed to summarise");
+    }
+
+    const data = await res.json();
+    setSummary(data.summary);
+    setUrdu(data.urdu);
+  } catch (error) {
+    console.error("Error:", error);
+    setSummary("Error: Unable to fetch summary.");
+    setUrdu("");
+  }
+};
+
 
   return (
     <main className="max-w-xl mx-auto py-10 space-y-6">
