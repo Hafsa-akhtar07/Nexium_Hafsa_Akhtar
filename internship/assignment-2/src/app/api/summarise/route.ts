@@ -37,7 +37,9 @@ export async function POST(req: Request) {
     if (!summary) throw new Error("Failed to generate summary");
 
     // 3. Translate summary to Urdu
-    const urdu = translateToUrdu(summary);
+    // const urdu = translateToUrdu(summary);
+    const urdu = await translateToUrdu(summary);
+
 
     console.log("🧠 Summary:", summary);
     console.log("🌐 Urdu Translation:", urdu);
