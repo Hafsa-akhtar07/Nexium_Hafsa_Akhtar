@@ -40,9 +40,14 @@ export async function POST(req: Request) {
     // const urdu = translateToUrdu(summary);
     const urdu = await translateToUrdu(summary);
 
+const brief = summary.split(". ").slice(0, 1).join(". ") + ".";
+const bullets = summary.split(". ").map((point: string) => `• ${point.trim()}`).filter((p: string) => p.length > 5);
+const tldr = summary.slice(-150); // or pick first/last sentence
 
-    console.log("🧠 Summary:", summary);
-    console.log("🌐 Urdu Translation:", urdu);
+
+
+
+
 
     // 4. Save full blog in MongoDB
     const mongoClient = new MongoClient(process.env.MONGODB_URI!);
@@ -73,7 +78,12 @@ await mongoCollection.insertOne({
 
     if (supabaseError) throw new Error("Supabase insert failed: " + supabaseError.message);
 
-    return NextResponse.json({ summary, urdu });
+    return NextResponse.json({ summary, urdu ,
+  brief,
+  bullets,
+  tldr}
+ 
+    );
   } catch (error) {
     console.error("🔥 Error in summarise API:", error);
     return NextResponse.json({ error: "Failed to summarise" }, { status: 500 });
