@@ -93,59 +93,76 @@ import { createClient } from "@supabase/supabase-js";
 export async function POST(req: Request) {
   console.log("🚀 API /summarise triggered");
 
-  // Log all required envs
-  console.log("🔐 ENV VARS:", {
-    HUGGINGFACE_API_KEY: !!process.env.HUGGINGFACE_API_KEY,
-    MONGODB_URI: !!process.env.MONGODB_URI,
-    SUPABASE_ANON_KEY: !!process.env.SUPABASE_ANON_KEY,
-  });
+  const huggingfaceKey = process.env.HUGGINGFACE_API_KEY;
+  const mongoUri = process.env.MONGODB_URI;
+  const supabaseKey = process.env.SUPABASE_ANON_KEY;
+
+  // Check envs
+  if (!huggingfaceKey || !mongoUri || !supabaseKey) {
+    console.error("❌ Missing required environment variables");
+    return NextResponse.json({ error: "Server misconfiguration (env vars)" }, { status: 500 });
+  }
 
   try {
     const { url } = await req.json();
     if (!url) {
-      console.error("❌ URL missing in request");
       return NextResponse.json({ error: "URL is required" }, { status: 400 });
     }
 
-    // 1. Scrape blog text
-    const res = await fetch(url);
-    const html = await res.text();
+    // Scrape blog HTML with User-Agent header
+    let html = "";
+    try {
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36",
+        },
+      });
+      html = await res.text();
+    } catch  {
+      throw new Error("❌ Failed to fetch blog (invalid URL or SSL error).");
+    }
+
     const cheerio = (await import("cheerio")).load(html);
     const paragraphs = cheerio("p").map((_, el) => cheerio(el).text()).get().join(" ");
     const plainText = paragraphs.slice(0, 3000);
 
     if (!plainText || plainText.length < 100) {
-      throw new Error("Scraped content is too short or empty");
+      throw new Error("Blog content too short or empty.");
     }
 
-    console.log("📄 Scraped blog text:", plainText.slice(0, 200));
+    console.log("📄 Blog scraped (500 chars):", plainText.slice(0, 500));
 
-    // 2. Summarize using HuggingFace
+    // Summarize with HuggingFace
     const hfRes = await fetch("https://api-inference.huggingface.co/models/facebook/bart-large-cnn", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
+        Authorization: `Bearer ${huggingfaceKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ inputs: plainText }),
     });
 
     const hfResult = await hfRes.json();
-    console.log("🧠 HuggingFace raw response:", hfResult);
+    console.log("🧠 HuggingFace raw:", hfResult);
 
-    const summary = hfResult[0]?.summary_text;
-    if (!summary) {
-      throw new Error("HuggingFace summary failed. Check model or API key.");
+    if (!Array.isArray(hfResult) || !hfResult[0]?.summary_text) {
+      throw new Error("❌ HuggingFace summary failed");
     }
 
-    // 3. Translate
+    const summary = hfResult[0].summary_text;
+
+    // Translate
     const urdu = await translateToUrdu(summary);
     const brief = summary.split(". ").slice(0, 1).join(". ") + ".";
-    const bullets = summary.split(". ").map((s: string) => `• ${s.trim()}`).filter((p:string) => p.length > 5);
+    const bullets = summary
+      .split(". ")
+      .map((s: string) => `• ${s.trim()}`)
+      .filter((p: string) => p.length > 5);
     const tldr = summary.slice(-150);
 
-    // 4. Save in MongoDB
-    const mongoClient = new MongoClient(process.env.MONGODB_URI!);
+    // Save to MongoDB
+    const mongoClient = new MongoClient(mongoUri);
     await mongoClient.connect();
     await mongoClient.db("blog_summaries").collection("blogs").insertOne({
       url,
@@ -154,18 +171,12 @@ export async function POST(req: Request) {
     });
     await mongoClient.close();
 
-    // 5. Save in Supabase
-    const supabase = createClient(
-      "https://ruwaaywyobhsviwyxwfk.supabase.co",
-      process.env.SUPABASE_ANON_KEY!
-    );
-
-    const { error: supabaseError } = await supabase.from("summaries").insert([
-      { url, summary, urdu },
-    ]);
+    // Save to Supabase
+    const supabase = createClient("https://ruwaaywyobhsviwyxwfk.supabase.co", supabaseKey);
+    const { error: supabaseError } = await supabase.from("summaries").insert([{ url, summary, urdu }]);
 
     if (supabaseError) {
-      throw new Error("Supabase insert failed: " + supabaseError.message);
+      throw new Error("❌ Supabase insert failed: " + supabaseError.message);
     }
 
     return NextResponse.json({ summary, urdu, brief, bullets, tldr });
