@@ -112,17 +112,13 @@ export async function POST(req: Request) {
 
     // Scrape blog HTML with User-Agent header
     let html = "";
-    try {
-      const res = await fetch(url, {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36",
-        },
-      });
-      html = await res.text();
-    } catch  {
-      throw new Error("❌ Failed to fetch blog (invalid URL or SSL error).");
-    }
+try {
+  const proxyRes = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+  html = await proxyRes.text();
+} catch {
+  throw new Error("❌ Failed to fetch blog (invalid URL or SSL error).");
+}
+
 
     const cheerio = (await import("cheerio")).load(html);
     const paragraphs = cheerio("p").map((_, el) => cheerio(el).text()).get().join(" ");
