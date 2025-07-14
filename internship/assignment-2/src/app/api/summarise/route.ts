@@ -84,6 +84,7 @@
 //     return NextResponse.json({ error: "Failed to summarise" }, { status: 500 });
 //   }
 // }
+export const dynamic = "force-dynamic"; // disables edge runtime, uses Node.js
 
 import { NextResponse } from "next/server";
 import { translateToUrdu } from "@/lib/translate";
