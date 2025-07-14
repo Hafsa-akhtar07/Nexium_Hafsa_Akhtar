@@ -84,10 +84,7 @@
 //     return NextResponse.json({ error: "Failed to summarise" }, { status: 500 });
 //   }
 // }
-export const dynamic = "force-dynamic"; // disables edge runtime, uses Node.js
-
 import { NextResponse } from "next/server";
-import { translateToUrdu } from "@/lib/translate";
 import { MongoClient } from "mongodb";
 import { createClient } from "@supabase/supabase-js";
 
@@ -104,24 +101,16 @@ export async function POST(req: Request) {
 
   try {
     const { url } = await req.json();
-    if (!url) {
-      return NextResponse.json({ error: "URL is required" }, { status: 400 });
-    }
+    if (!url) return NextResponse.json({ error: "URL is required" }, { status: 400 });
 
-    // Scrape blog HTML with User-Agent header
-    let html = "";
-    try {
-      const res = await fetch(url, {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36",
-        },
-      });
-      html = await res.text();
-    } catch {
-      throw new Error("❌ Failed to fetch blog (invalid URL or SSL error).");
-    }
-
+    // Scrape HTML
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36",
+      },
+    });
+    const html = await res.text();
     const cheerio = (await import("cheerio")).load(html);
     const paragraphs = cheerio("p").map((_, el) => cheerio(el).text()).get().join(" ");
     const plainText = paragraphs.slice(0, 3000);
@@ -130,21 +119,12 @@ export async function POST(req: Request) {
       throw new Error("Blog content too short or empty.");
     }
 
-    console.log("📄 Blog scraped (300 chars):", plainText.slice(0, 300));
-
-    // ✅ Simulated summary logic
-    const summary = plainText.split(". ").slice(4, 8).join(". ") + ".";
-
-    // Translate
-    const urdu = await translateToUrdu(summary);
-    const brief = summary.split(". ").slice(0, 1).join(". ") + ".";
-    const bullets = summary
-      .split(". ")
-      .map((s: string) => `• ${s.trim()}`)
-      .filter((p: string) => p.length > 5);
+    const summary = plainText.split(". ").slice(3, 7).join(". ") + ".";
+    const urdu = "یہ خلاصہ ایک ڈیمو ترجمہ ہے۔"; // static fake translation
+    const brief = summary.split(". ")[0] + ".";
+    const bullets = summary.split(". ").map(s => `• ${s}`).filter(s => s.length > 5);
     const tldr = summary.slice(-150);
 
-    // Save to MongoDB
     const mongoClient = new MongoClient(mongoUri);
     await mongoClient.connect();
     await mongoClient.db("blog_summaries").collection("blogs").insertOne({
@@ -154,18 +134,15 @@ export async function POST(req: Request) {
     });
     await mongoClient.close();
 
-    // Save to Supabase
     const supabase = createClient("https://ruwaaywyobhsviwyxwfk.supabase.co", supabaseKey);
     const { error: supabaseError } = await supabase.from("summaries").insert([{ url, summary, urdu }]);
-
     if (supabaseError) {
       throw new Error("❌ Supabase insert failed: " + supabaseError.message);
     }
 
     return NextResponse.json({ summary, urdu, brief, bullets, tldr });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : JSON.stringify(error);
-    console.error("🔥 FINAL ERROR:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch  {
+    console.error("🔥 FINAL ERROR:");
+    return NextResponse.json({ }, { status: 500 });
   }
 }
