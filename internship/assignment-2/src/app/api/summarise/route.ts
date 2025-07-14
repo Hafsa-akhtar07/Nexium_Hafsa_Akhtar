@@ -94,12 +94,10 @@ import { createClient } from "@supabase/supabase-js";
 export async function POST(req: Request) {
   console.log("🚀 API /summarise triggered");
 
-  const huggingfaceKey = process.env.HUGGINGFACE_API_KEY;
   const mongoUri = process.env.MONGODB_URI;
   const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
-  // Check envs
-  if (!huggingfaceKey || !mongoUri || !supabaseKey) {
+  if (!mongoUri || !supabaseKey) {
     console.error("❌ Missing required environment variables");
     return NextResponse.json({ error: "Server misconfiguration (env vars)" }, { status: 500 });
   }
@@ -112,13 +110,17 @@ export async function POST(req: Request) {
 
     // Scrape blog HTML with User-Agent header
     let html = "";
-try {
-  const proxyRes = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
-  html = await proxyRes.text();
-} catch {
-  throw new Error("❌ Failed to fetch blog (invalid URL or SSL error).");
-}
-
+    try {
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36",
+        },
+      });
+      html = await res.text();
+    } catch {
+      throw new Error("❌ Failed to fetch blog (invalid URL or SSL error).");
+    }
 
     const cheerio = (await import("cheerio")).load(html);
     const paragraphs = cheerio("p").map((_, el) => cheerio(el).text()).get().join(" ");
@@ -128,26 +130,10 @@ try {
       throw new Error("Blog content too short or empty.");
     }
 
-    console.log("📄 Blog scraped (500 chars):", plainText.slice(0, 500));
+    console.log("📄 Blog scraped (300 chars):", plainText.slice(0, 300));
 
-    // Summarize with HuggingFace
-    const hfRes = await fetch("https://api-inference.huggingface.co/models/facebook/bart-large-cnn", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${huggingfaceKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ inputs: plainText }),
-    });
-
-    const hfResult = await hfRes.json();
-    console.log("🧠 HuggingFace raw:", hfResult);
-
-    if (!Array.isArray(hfResult) || !hfResult[0]?.summary_text) {
-      throw new Error("❌ HuggingFace summary failed");
-    }
-
-    const summary = hfResult[0].summary_text;
+    // ✅ Simulated summary logic
+    const summary = plainText.split(". ").slice(4, 8).join(". ") + ".";
 
     // Translate
     const urdu = await translateToUrdu(summary);
@@ -183,4 +169,3 @@ try {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-
