@@ -89,7 +89,6 @@ import { MongoClient } from "mongodb";
 import { createClient } from "@supabase/supabase-js";
 
 export async function POST(req: Request) {
-  console.log("🚀 API /summarise triggered");
 
   const mongoUri = process.env.MONGODB_URI;
   const supabaseKey = process.env.SUPABASE_ANON_KEY;
@@ -104,18 +103,15 @@ export async function POST(req: Request) {
     if (!url) return NextResponse.json({ error: "URL is required" }, { status: 400 });
 
     // Scrape HTML
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36",
-      },
-    });
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+const res = await fetch(proxyUrl);
+
     const html = await res.text();
     const cheerio = (await import("cheerio")).load(html);
     const paragraphs = cheerio("p").map((_, el) => cheerio(el).text()).get().join(" ");
     const plainText = paragraphs.slice(0, 3000);
 
-    if (!plainText || plainText.length < 100) {
+    if (!plainText || plainText.length < 50) {
       throw new Error("Blog content too short or empty.");
     }
 
