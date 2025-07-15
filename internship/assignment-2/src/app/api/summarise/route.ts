@@ -141,8 +141,9 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ summary, urdu, brief, bullets, tldr });
-  } catch  {
-    console.error("🔥 FINAL ERROR:");
-    return NextResponse.json({ }, { status: 500 });
-  }
+  } catch (error) {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error("🔥 FINAL ERROR:", message);
+  return NextResponse.json({ error: message }, { status: 500 });
+}
 }
