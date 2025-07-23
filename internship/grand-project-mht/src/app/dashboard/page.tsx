@@ -45,22 +45,52 @@ export default function DashboardPage() {
     checkUser()
   }, [router])
 
-  const loadMoodHistory = async (userId: string) => {
-    try {
-      const response = await fetch(`/api/mood-entries?userId=${userId}&limit=20`)
-      const data = await response.json()
-      setMoodHistory(data.entries || [])
+  // const loadMoodHistory = async (userId: string) => {
+  //   try {
+  //     const response = await fetch(`/api/mood-entries?userId=${userId}&limit=20`)
+  //     const data = await response.json()
+  //     setMoodHistory(data.entries || [])
       
-      // Get today's entries
-      const today = new Date().toDateString()
-      const todayEntries = data.entries?.filter((entry: MoodEntry) => 
-        new Date(entry.date).toDateString() === today
-      ) || []
-      setTodayEntries(todayEntries)
-    } catch (error) {
-      console.error('Error loading mood history:', error)
+  //     // Get today's entries
+  //     const today = new Date().toDateString()
+  //     const todayEntries = data.entries?.filter((entry: MoodEntry) => 
+  //       new Date(entry.date).toDateString() === today
+  //     ) || []
+  //     setTodayEntries(todayEntries)
+  //   } catch (error) {
+  //     console.error('Error loading mood history:', error)
+  //   }
+  // }
+const loadMoodHistory = async (userId: string) => {
+  try {
+    const response = await fetch(`/api/mood-entries?userId=${userId}&limit=20`)
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('🚨 Error response from API:', response.status, errorText)
+      return
     }
+
+    const text = await response.text()
+    if (!text) {
+      console.warn('⚠️ Empty response from server')
+      return
+    }
+
+    const data = JSON.parse(text)
+    setMoodHistory(data.entries || [])
+
+    // Filter today's entries
+    const today = new Date().toDateString()
+    const todayEntries = data.entries?.filter((entry: MoodEntry) =>
+      new Date(entry.date).toDateString() === today
+    ) || []
+    setTodayEntries(todayEntries)
+
+  } catch (error) {
+    console.error('Error loading mood history:', error)
   }
+}
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
