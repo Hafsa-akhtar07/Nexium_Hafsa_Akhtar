@@ -75,39 +75,46 @@ export async function POST(request: NextRequest) {
     let aiTip = "Take a moment to breathe deeply and be kind to yourself.";
 
     try {
-      const openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY || ''}`,
-          'HTTP-Referer': 'https://your-site.com', // optional
-          'X-Title': 'Mental Health Tracker', // optional
-        },
-        body: JSON.stringify({
-          model: 'deepseek/deepseek-chat-v3-0324:free',
-          messages: [
-            {
-              role: 'user',
-              content: `User said: "${mood}". Generate a kind, supportive message and a short tip for self-care.`,
-            }
-          ]
-        }),
-      });
+  const openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY || ''}`,
+      'HTTP-Referer': 'https://your-site.com',
+      'X-Title': 'Mental Health Tracker',
+    },
+    body: JSON.stringify({
+      model: 'deepseek/deepseek-chat-v3-0324:free',
+      messages: [
+        {
+          role: 'user',
+          content: `User said: "${mood}". Generate a kind, supportive message and a short tip for self-care.`,
+        }
+      ]
+    }),
+  });
 
-      const data = await openRouterRes.json();
+  const data = await openRouterRes.json();
+  console.log("AI Response JSON:", data);
 
-      const aiContent = data?.choices?.[0]?.message?.content || '';
-      const [message, tip] = aiContent.split('Tip:');
+  const aiContent = data?.choices?.[0]?.message?.content || '';
+  console.log("Raw AI Content:", aiContent);
 
-      aiMessage = message?.trim() || aiMessage;
-      aiTip = tip?.trim() || aiTip;
+  if (aiContent.toLowerCase().includes("tip:")) {
+    const [msg, tip] = aiContent.split(/Tip:/i);
+    aiMessage = msg.trim() || aiMessage;
+    aiTip = tip.trim() || aiTip;
+  } else {
+    aiMessage = aiContent.trim();
+    aiTip = "Take a moment to care for yourself today.";
+  }
 
-      console.log('AI Message:', aiMessage);
-      console.log('AI Tip:', aiTip);
+  console.log('AI Message:', aiMessage);
+  console.log('AI Tip:', aiTip);
+} catch (err) {
+  console.error('OpenRouter AI call failed:', err);
+}
 
-    } catch (err) {
-      console.error('OpenRouter AI call failed:', err);
-    }
 
     const newEntry = new MoodEntry({
       userId,
