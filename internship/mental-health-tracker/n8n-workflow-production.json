@@ -1,0 +1,220 @@
+{
+  "name": "Mental Health Tracker - AI Mood Analysis",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mood-analysis",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "mood-analysis-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate incoming data\nconst { userId, userEmail, mood, moodScore, timestamp, source } = $input.first().json;\n\n// Validate required fields\nif (!userId || !userEmail || !mood) {\n  throw new Error('Missing required fields: userId, userEmail, or mood');\n}\n\n// Validate mood length\nif (mood.length > 2000) {\n  throw new Error('Mood text is too long (max 2000 characters)');\n}\n\n// Validate mood score if provided\nif (moodScore && (moodScore < 1 || moodScore > 10)) {\n  throw new Error('Mood score must be between 1 and 10');\n}\n\n// Prepare data for OpenAI\nconst moodContext = moodScore ? \n  `Mood: ${mood} (Score: ${moodScore}/10)` : \n  `Mood: ${mood}`;\n\nreturn {\n  json: {\n    userId,\n    userEmail,\n    mood,\n    moodScore,\n    moodContext,\n    timestamp,\n    source\n  }\n};"
+      },
+      "id": "validate-input",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "apiKey",
+        "resource": "chat",
+        "model": "gpt-3.5-turbo",
+        "messages": {
+          "messageValues": [
+            {
+              "role": "system",
+              "content": "You are a compassionate mental health AI assistant. Your role is to:\n\n1. Analyze the user's mood and emotional state\n2. Provide a supportive, encouraging response (max 150 words)\n3. Offer a practical self-care tip (max 100 words)\n4. Be warm, understanding, and non-judgmental\n5. Never give medical advice or replace professional help\n\nFormat your response as JSON with these fields:\n- aiMessage: Your supportive response\n- aiTip: A practical self-care tip\n- moodAnalysis: Brief analysis of the mood (positive/negative/neutral)\n- suggestedActions: 2-3 simple actions they could take"
+            },
+            {
+              "role": "user",
+              "content": "{{$json.moodContext}}\n\nPlease provide a supportive response and self-care tip based on this mood description."
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 500,
+          "responseFormat": {
+            "type": "json_object"
+          }
+        }
+      },
+      "id": "openai-node",
+      "name": "OpenAI GPT-3.5",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse OpenAI response and handle errors\ntry {\n  const openaiResponse = $input.first().json;\n  const originalData = $('Validate Input').first().json;\n  \n  // Extract the content from OpenAI response\n  let aiData;\n  try {\n    aiData = JSON.parse(openaiResponse.choices[0].message.content);\n  } catch (parseError) {\n    // Fallback if JSON parsing fails\n    aiData = {\n      aiMessage: openaiResponse.choices[0].message.content,\n      aiTip: \"Take a moment to breathe deeply and be kind to yourself.\",\n      moodAnalysis: \"neutral\",\n      suggestedActions: [\"Practice deep breathing\", \"Take a short walk\", \"Connect with a friend\"]\n    };\n  }\n  \n  // Validate AI response\n  if (!aiData.aiMessage || !aiData.aiTip) {\n    throw new Error('Invalid AI response format');\n  }\n  \n  // Truncate responses if too long\n  aiData.aiMessage = aiData.aiMessage.substring(0, 150);\n  aiData.aiTip = aiData.aiTip.substring(0, 100);\n  \n  return {\n    json: {\n      ...originalData,\n      aiMessage: aiData.aiMessage,\n      aiTip: aiData.aiTip,\n      moodAnalysis: aiData.moodAnalysis || 'neutral',\n      suggestedActions: aiData.suggestedActions || [],\n      processedAt: new Date().toISOString()\n    }\n  };\n} catch (error) {\n  // Return fallback response if anything fails\n  return {\n    json: {\n      ...$('Validate Input').first().json,\n      aiMessage: \"Thank you for sharing your mood. Remember, it's okay to feel this way and your feelings are valid.\",\n      aiTip: \"Take a moment to breathe deeply and be kind to yourself.\",\n      moodAnalysis: \"neutral\",\n      suggestedActions: [\"Practice deep breathing\", \"Take a short walk\"],\n      processedAt: new Date().toISOString(),\n      error: error.message\n    }\n  };\n}"
+      },
+      "id": "process-response",
+      "name": "Process AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"aiMessage\": \"{{$json.aiMessage}}\",\n  \"aiTip\": \"{{$json.aiTip}}\",\n  \"moodAnalysis\": \"{{$json.moodAnalysis}}\",\n  \"suggestedActions\": {{JSON.stringify($json.suggestedActions)}},\n  \"processedAt\": \"{{$json.processedAt}}\",\n  \"userId\": \"{{$json.userId}}\"\n}",
+        "options": {
+          "responseHeaders": {
+            "values": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "respond-to-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "error-check",
+              "leftValue": "={{$json.error}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "error-check",
+      "name": "Check for Errors",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [900, 500]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"error\": \"AI processing failed\",\n  \"aiMessage\": \"Thank you for sharing your mood. I'm here to support you.\",\n  \"aiTip\": \"Take a moment to breathe deeply and be kind to yourself.\",\n  \"fallback\": true\n}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "values": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "error-response",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1120, 500]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "OpenAI GPT-3.5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI GPT-3.5": {
+      "main": [
+        [
+          {
+            "node": "Process AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process AI Response": {
+      "main": [
+        [
+          {
+            "node": "Check for Errors",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for Errors": {
+      "main": [
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "mental-health-tracker-workflow"
+} 

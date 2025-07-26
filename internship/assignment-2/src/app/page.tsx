@@ -407,12 +407,12 @@ export default function Home() {
                 <p className="text-sm text-right font-noto mt-2"><strong>اردو:</strong> {item.urdu}</p>
                 {item.created_at && (
                   <p className="text-xs mt-2 text-right italic opacity-70">
-                    ⏱ {new Date(item.created_at).toLocaleString("en-PK", {
-      timeZone: "Asia/Karachi",
-      hour12: true,
-      dateStyle: "medium",
-      timeStyle: "short"
-    })}
+                    ⏱ {new Date(item.created_at + "Z").toLocaleString("en-PK", {
+    timeZone: "Asia/Karachi",
+    hour12: true,
+    dateStyle: "medium",
+    timeStyle: "short"
+  })}
                   </p>
                 )}
               </div>

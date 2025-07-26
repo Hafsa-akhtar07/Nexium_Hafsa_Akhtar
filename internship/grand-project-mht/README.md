@@ -1,36 +1,207 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Mental Health Tracker
+
+A modern AI-powered mental health tracking web application built with Next.js 14, Supabase, MongoDB, and n8n for AI automation.
+
+## Features
+
+- 🔐 **Magic Link Authentication** - Secure passwordless login via Supabase
+- 📝 **Daily Mood Tracking** - Record your daily mood and thoughts
+- 🤖 **AI-Powered Support** - Get personalized AI responses and self-care tips
+- 📊 **Mood History** - View your mood patterns over time
+- 🎨 **Modern UI** - Beautiful interface built with Tailwind CSS and ShadCN UI
+- 📱 **Responsive Design** - Works perfectly on desktop and mobile
+
+## Tech Stack
+
+- **Frontend**: Next.js 14 (App Router), TypeScript, Tailwind CSS
+- **UI Components**: ShadCN UI, Radix UI
+- **Authentication**: Supabase (Magic Link)
+- **Database**: MongoDB with Mongoose
+- **AI Processing**: n8n (self-hosted) with OpenAI integration
+- **Styling**: Tailwind CSS with custom design system
+
+## Project Structure
+
+```
+mental-health-tracker/
+├── src/
+│   ├── app/                    # Next.js App Router pages
+│   │   ├── api/               # API routes
+│   │   │   └── mood-entries/  # Mood entry CRUD operations
+│   │   ├── dashboard/         # Protected dashboard page
+│   │   ├── globals.css        # Global styles
+│   │   ├── layout.tsx         # Root layout
+│   │   └── page.tsx           # Landing page
+│   ├── components/            # Reusable UI components
+│   │   └── ui/               # ShadCN UI components
+│   └── lib/                  # Utility functions and configurations
+│       ├── mongodb.ts        # MongoDB connection and models
+│       ├── supabase.ts       # Supabase client
+│       └── utils.ts          # Utility functions
+├── package.json              # Dependencies and scripts
+├── tailwind.config.js        # Tailwind CSS configuration
+├── tsconfig.json            # TypeScript configuration
+└── env.example              # Environment variables template
+```
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 18+ 
+- MongoDB (local or Atlas)
+- Supabase account
+- n8n (optional, for AI processing)
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd mental-health-tracker
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Set up environment variables**
+   ```bash
+   cp env.example .env.local
+   ```
+   
+   Edit `.env.local` with your configuration:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   MONGODB_URI=mongodb://localhost:27017/mental-health-tracker
+   N8N_WEBHOOK_URL=http://localhost:5678/webhook/mood-analysis
+   ```
+
+4. **Set up Supabase**
+   - Create a new Supabase project
+   - Enable Email Auth with Magic Link
+   - Copy your project URL and anon key to `.env.local`
+
+5. **Set up MongoDB**
+   - Install MongoDB locally or use MongoDB Atlas
+   - Create a database named `mental-health-tracker`
+   - Update `MONGODB_URI` in `.env.local`
+
+6. **Set up n8n (Optional)**
+   - Install n8n: `npm install -g n8n`
+   - Create a webhook workflow for mood analysis
+   - Configure OpenAI integration
+   - Update `N8N_WEBHOOK_URL` in `.env.local`
+
+7. **Run the development server**
+   ```bash
+   npm run dev
+   ```
+
+8. **Open your browser**
+   Navigate to [http://localhost:3000](http://localhost:3000)
+
+## Usage
+
+### Authentication
+1. Enter your email on the landing page
+2. Click "Send Magic Link"
+3. Check your email and click the magic link
+4. You'll be redirected to the dashboard
+
+### Mood Tracking
+1. On the dashboard, you'll see a mood entry form
+2. Describe how you're feeling today
+3. Submit the form to save your mood
+4. Get an AI-powered response and self-care tip
+5. View your mood history on the right side
+
+### Features
+- **Daily Limit**: Only one mood entry per day
+- **AI Responses**: Personalized messages based on your mood
+- **History View**: See your past entries and AI responses
+- **Statistics**: Track your total entries and daily progress
+
+## API Endpoints
+
+### GET /api/mood-entries
+Get mood entries for a user
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+GET /api/mood-entries?userId=user_id
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### POST /api/mood-entries
+Create a new mood entry
+```bash
+POST /api/mood-entries
+Content-Type: application/json
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+{
+  "userId": "user_id",
+  "mood": "I'm feeling great today!"
+}
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## n8n Workflow Setup
 
-## Learn More
+For AI processing, create an n8n workflow:
 
-To learn more about Next.js, take a look at the following resources:
+1. **Webhook Trigger**: Receive mood data from Next.js
+2. **OpenAI Node**: Generate AI response using mood text
+3. **Respond to Webhook**: Return AI message to Next.js
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Example workflow:
+```
+Webhook → OpenAI (GPT-3.5) → Respond to Webhook
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deployment
 
-## Deploy on Vercel
+### Vercel (Recommended)
+1. Push your code to GitHub
+2. Connect your repository to Vercel
+3. Add environment variables in Vercel dashboard
+4. Deploy!
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Other Platforms
+- **Netlify**: Similar to Vercel setup
+- **Railway**: Supports MongoDB and environment variables
+- **DigitalOcean App Platform**: Full-stack deployment
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | Yes |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key | Yes |
+| `MONGODB_URI` | MongoDB connection string | Yes |
+| `N8N_WEBHOOK_URL` | n8n webhook URL for AI processing | No |
+| `OPENAI_API_KEY` | OpenAI API key (if not using n8n) | No |
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License.
+
+## Support
+
+For support, please open an issue on GitHub or contact the maintainers.
+
+## Roadmap
+
+- [ ] Mood analytics and charts
+- [ ] Export mood data
+- [ ] Push notifications
+- [ ] Mobile app
+- [ ] Integration with health apps
+- [ ] Group mood tracking
+- [ ] Professional therapist integration 
