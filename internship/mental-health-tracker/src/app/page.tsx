@@ -7,40 +7,96 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { supabase } from '@/lib/supabase'
 import { Heart, Brain, Sparkles, Sun, Moon, Lock } from 'lucide-react'
 
+type ThemeName = 'clay' | 'stone' | 'forest'
+
 interface ThemeColors {
-  primary: string
-  secondary: string
-  accent: string
-  text: string
-  border: string
-  bgImage: string
+  light: {
+    primary: string
+    secondary: string
+    accent: string
+    text: string
+    border: string
+    bgImage: string
+    bgColor: string
+  }
+  dark: {
+    primary: string
+    secondary: string
+    accent: string
+    text: string
+    border: string
+    bgImage: string
+    bgColor: string
+  }
 }
 
-const themeColors: Record<'earth' | 'sunset' | 'forest', ThemeColors> = {
-  earth: {
-    primary: 'bg-amber-50',
-    secondary: 'bg-amber-100',
-    accent: 'bg-amber-600',
-    text: 'text-amber-900',
-    border: 'border-amber-200',
-    bgImage: "bg-[url('https://images.unsplash.com/photo-1605106702734-205df224ecce?q=80&w=1470&auto=format&fit=crop')]"
+const themes: Record<ThemeName, ThemeColors> = {
+  clay: {
+    light: {
+      primary: 'bg-rose-100',
+      secondary: 'bg-rose-200',
+      accent: 'bg-rose-600',
+      text: 'text-rose-900',
+      border: 'border-rose-300',
+      bgImage: 'https://images.unsplash.com/photo-1605106702734-205df224ecce?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80',
+      bgColor: 'bg-rose-50'
+    },
+    dark: {
+      primary: 'bg-rose-900',
+      secondary: 'bg-rose-800',
+      accent: 'bg-rose-500',
+      text: 'text-rose-100',
+      border: 'border-rose-700',
+      bgImage: "bg-[url('https://images.unsplash.com/photo-1518562180175-34a163b1a9a6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80')]",
+      bgColor: 'bg-rose-950'
+    }
   },
-  sunset: {
-    primary: 'bg-orange-50',
-    secondary: 'bg-orange-100',
-    accent: 'bg-orange-500',
-    text: 'text-orange-900',
-    border: 'border-orange-200',
-    bgImage: "bg-[url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1473&auto=format&fit=crop')]"
+  stone: {
+    light: {
+      primary: 'bg-slate-100',
+      secondary: 'bg-slate-200',
+      accent: 'bg-slate-600',
+      text: 'text-slate-900',
+      border: 'border-slate-300',
+      bgImage: "bg-[url('https://images.unsplash.com/photo-1516731415730-0c607149933a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80')] bg-cover bg-center bg-no-repeat",
+    bgColor: 'bg-slate-50'
+    },
+    dark: {
+      primary: 'bg-slate-900',
+      secondary: 'bg-slate-800',
+      accent: 'bg-slate-500',
+      text: 'text-slate-100',
+      border: 'border-slate-700',
+      bgImage: "bg-[url('https://images.unsplash.com/photo-1519752441410-d3ca70ecb937?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1374&q=80')]",
+      bgColor: 'bg-slate-950'
+    }
   },
   forest: {
-    primary: 'bg-emerald-50',
-    secondary: 'bg-emerald-100',
-    accent: 'bg-emerald-600',
-    text: 'text-emerald-900',
-    border: 'border-emerald-200',
-    bgImage: "bg-[url('https://images.unsplash.com/photo-1476231682828-37e571bc172f?q=80&w=1374&auto=format&fit=crop')]"
+    light: {
+      primary: 'bg-green-100',
+      secondary: 'bg-green-200',
+      accent: 'bg-green-600',
+      text: 'text-green-900',
+      border: 'border-green-300',
+      bgImage: "bg-[url('https://images.unsplash.com/photo-1519752441410-d3ca70ecb937?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1374&q=80')] bg-cover bg-center bg-no-repeat",
+    bgColor: 'bg-slate-950'
+    },
+    dark: {
+      primary: 'bg-green-900',
+      secondary: 'bg-green-800',
+      accent: 'bg-green-500',
+      text: 'text-green-100',
+      border: 'border-green-700',
+      bgImage: "bg-[url('https://images.unsplash.com/photo-1448375240586-882707db888b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80')]",
+      bgColor: 'bg-green-950'
+    }
   }
+}
+const DEFAULT_THEME: ThemeName = 'clay'
+
+function getThemeColors(themeName: ThemeName, darkMode: boolean): ThemeColors['light'] | ThemeColors['dark'] {
+  const theme = themes[themeName] || themes[DEFAULT_THEME]
+  return darkMode ? theme.dark : theme.light
 }
 
 export default function HomePage() {
@@ -49,10 +105,10 @@ export default function HomePage() {
   const [email, setEmail] = useState('')
   const [sending, setSending] = useState(false)
   const [darkMode, setDarkMode] = useState(false)
-  const [currentTheme, setCurrentTheme] = useState<'earth' | 'sunset' | 'forest'>('earth')
+  const [currentTheme, setCurrentTheme] = useState<ThemeName>(DEFAULT_THEME)
   const router = useRouter()
 
-  const currentColors = themeColors[currentTheme]
+  const currentColors = getThemeColors(currentTheme, darkMode)
 
   useEffect(() => {
     const checkUser = async () => {
@@ -105,7 +161,7 @@ export default function HomePage() {
     }
   }
 
-  const handleThemeChange = (theme: 'earth' | 'sunset' | 'forest') => {
+  const handleThemeChange = (theme: 'clay' | 'stone' | 'forest') => {
     setCurrentTheme(theme)
   }
 
@@ -136,14 +192,14 @@ export default function HomePage() {
           </Button>
           <div className="flex space-x-1">
             <button 
-              onClick={() => handleThemeChange('earth')} 
-              className={`h-6 w-6 rounded-full ${currentTheme === 'earth' ? 'ring-2 ring-offset-2 ring-amber-500' : ''} bg-amber-500`}
-              aria-label="Earth theme"
+              onClick={() => handleThemeChange('clay')} 
+              className={`h-6 w-6 rounded-full ${currentTheme === 'clay' ? 'ring-2 ring-offset-2 ring-amber-500' : ''} bg-rose-500`}
+              aria-label="Clay theme"
             />
             <button 
-              onClick={() => handleThemeChange('sunset')} 
-              className={`h-6 w-6 rounded-full ${currentTheme === 'sunset' ? 'ring-2 ring-offset-2 ring-orange-500' : ''} bg-orange-500`}
-              aria-label="Sunset theme"
+              onClick={() => handleThemeChange('stone')} 
+              className={`h-6 w-6 rounded-full ${currentTheme === 'stone' ? 'ring-2 ring-offset-2 ring-orange-500' : ''} bg-slate-500`}
+              aria-label="Stone theme"
             />
             <button 
               onClick={() => handleThemeChange('forest')} 
