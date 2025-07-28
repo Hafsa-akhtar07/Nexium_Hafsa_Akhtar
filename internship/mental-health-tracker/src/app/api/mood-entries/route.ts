@@ -64,8 +64,8 @@ export async function POST(request: NextRequest) {
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${process.env.OPENROUTER_API_KEY || ""}`,
-      "HTTP-Referer": "https://your-site-url.com", // ✅ Replace with your actual deployed domain
-      "X-Title": "Mental Health Tracker", // ✅ Replace with your site name
+      "HTTP-Referer": "https://nexium-hafsa-akhtar.vercel.app/",
+  "X-Title": "Mental Health Tracker" // ✅ Replace with your site name
     },
     body: JSON.stringify({
       model: "deepseek/deepseek-chat-v3-0324:free",
